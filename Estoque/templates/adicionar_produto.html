@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Adicionar Produto</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #eee;
+      padding: 40px 20px;
+      margin: 0;
+    }
+
+    .container {
+      background-color: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+      max-width: 600px;
+      width: 100%;
+      margin: 80px auto 40px auto;
+      position: relative;
+    }
+
+    .voltar {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 16px;
+      text-decoration: none;
+      color: black;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 30px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      display: block;
+      margin: 0 auto 20px auto;
+      width: 90%;
+      max-width: 400px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 16px;
+      text-align: center;
+    }
+
+    button {
+      padding: 15px 30px;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 15px;
+      font-size: 20px;
+      cursor: pointer;
+      width: 90%;
+      max-width: 400px;
+      margin: 0 auto;
+      display: block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 40px;
+    }
+
+    th, td {
+      padding: 12px;
+      border: 1px solid #ccc;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+
+    .quantidade-baixa {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="voltar" href="{{ url_for('pagina_adm') }}">← Voltar</a>
+    <h2>Adicionar Produto</h2>
+    <form method="POST">
+      <input type="text" name="nome" placeholder="Nome do produto" required>
+      <input type="number" name="quantidade" placeholder="Quantidade" required>
+      <button type="submit">Cadastrar Produto</button>
+    </form>
+
+    {% if produtos %}
+      <table>
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Quantidade</th>
+      <th>Ajustar</th>
+      <th>Excluir</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for produto in produtos %}
+    <tr>
+      <td>{{ produto.nome }}</td>
+      <td style="color: {{ 'red' if produto.quantidade <= 5 else 'black' }}; font-weight: bold;">
+        {{ produto.quantidade }}
+      </td>
+      <td>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Grupo do botão + -->
+          <form method="POST" action="{{ url_for('atualizar_quantidade') }}" style="display: flex; align-items: center; gap: 5px;">
+            <input type="hidden" name="id" value="{{ produto.id }}">
+            <input type="hidden" name="operacao" value="mais">
+            <input type="number" name="valor" value="1" min="1" style="width: 50px; padding: 5px;">
+            <button type="submit" style="padding: 5px 12px; background-color: #444; color: white; border: none; border-radius: 5px;">+</button>
+          </form>
+
+          <!-- Grupo do botão - -->
+          <form method="POST" action="{{ url_for('atualizar_quantidade') }}" style="display: flex; align-items: center; gap: 5px;">
+            <input type="hidden" name="id" value="{{ produto.id }}">
+            <input type="hidden" name="operacao" value="menos">
+            <input type="number" name="valor" value="1" min="1" style="width: 50px; padding: 5px;">
+            <button type="submit" style="padding: 5px 12px; background-color: #444; color: white; border: none; border-radius: 5px;">-</button>
+          </form>
+        </div>
+      </td>
+      <td>
+        <form method="POST" action="{{ url_for('excluir_produto', id=produto.id) }}">
+          <button type="submit" style="color: red; border: none; background: none; font-size: 20px; cursor: pointer;">❌</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+</tbody>
+</table>
+    {% endif %}
+  </div>
+</body>
+</html>

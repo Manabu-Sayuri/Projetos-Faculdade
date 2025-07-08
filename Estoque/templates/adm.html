@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel Administrativo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #eee;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    h2 {
+      margin-bottom: 30px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      background-color: #444;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+    }
+
+    .btn:hover {
+      background-color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Bem-vindo, {{ nome }}! ({{ tipo }})</h2>
+    <div class="btn-group">
+      <a href="{{ url_for('adicionar_usuario') }}" class="btn">Adicionar Usuário</a>
+      <a href="{{ url_for('adicionar_produto') }}" class="btn">Adicionar Produto</a>
+    </div>
+  </div>
+</body>
+</html>
