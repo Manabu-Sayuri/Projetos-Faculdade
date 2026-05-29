@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Estoque de Veículos</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 30px; cursor: pointer; transition: all 0.2s ease-in-out; }
+        h1:hover { transform: scale(1.05); color: #3498db; text-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        
+        .top-controls { display: flex; gap: 10px; margin-bottom: 30px; }
+        .search-container { display: flex; gap: 10px; flex: 1; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .search-container input { flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; outline: none; }
+        
+        button { transition: all 0.2s ease-in-out !important; }
+        button:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
+        
+        .btn-buscar { padding: 12px 24px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; }
+        .btn-filtro { padding: 12px 24px; background-color: #f79139; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-novo { padding: 15px 24px; background-color: #2ecc71; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        .vehicle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); position: relative; }
+        .card h3 { margin: 0 0 15px 0; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; padding-right: 50px; }
+        .card p { margin: 8px 0; font-size: 14px; }
+        
+        /* Botões de Ação do Card (Editar e Excluir) */
+        .card-actions { position: absolute; top: 15px; right: 15px; display: flex; gap: 8px; }
+        .icon-btn { background: none; border: none; font-size: 18px; cursor: pointer; padding: 0; margin: 0; box-shadow: none !important; }
+        .icon-btn:hover { transform: scale(1.3) !important; filter: none !important; }
+        
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: white; margin-top: 10px; }
+        .status-disponivel { background-color: #2ecc71; }
+        .status-vendido { background-color: #e74c3c; }
+        .preco-venda { color: #e74c3c; font-weight: bold; }
+        .preco-riscado { text-decoration: line-through; color: #95a5a6; font-size: 12px; }
+        .btn-vender { width: 100%; margin-top: 15px; padding: 10px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 8px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2 { margin-top: 0; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        /* Estilos do Slider Duplo de Filtro (Atualizado: Números embaixo) */
+        .dual-slider-container { 
+            position: relative; 
+            width: 90%; 
+            height: 50px; 
+            margin: 10px auto 0 auto; /* O 10px aqui desgruda a barra do título de cima */
+            display: block; 
+            padding-top: 0px; 
+            padding-bottom: 20px; 
+        }
+
+        .dual-slider-track { 
+            position: absolute; 
+            height: 6px; 
+            border-radius: 3px; 
+            z-index: 0; 
+            pointer-events: none; 
+            left: 0; /* Isso garante que a linha não fuja para a esquerda! */
+        }
+        .grey-track { width: 100%; background: #ddd; }
+        .blue-track { background: #3498db; }
+        
+        .dual-slider-container input[type="range"] { 
+            position: absolute; 
+            width: calc(100% + 20px); /* Aumenta o tamanho invisível para puxar as bolinhas pra fora */
+            left: -10px; /* Compensa puxando para a esquerda para manter perfeito no centro */
+            top: 0; 
+            pointer-events: none; 
+            -webkit-appearance: none; 
+            background: transparent; 
+            border: none; 
+            padding: 0; 
+            outline: none; 
+            z-index: 2; 
+        }
+        .dual-slider-container input[type="range"]::-webkit-slider-thumb { pointer-events: all; width: 20px; height: 20px; background: #3498db; border-radius: 50%; cursor: pointer; -webkit-appearance: none; position: relative; z-index: 2; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        /* Controla o espaço debaixo APENAS dos blocos de barra (Ano, Preço e Km) */
+        .dual-slider-group {
+            margin-bottom: -20px; /* Aumente este número para afastar mais, ou diminua para juntar */
+        }
+
+        /* O número que acompanha a bolinha (MODIFICADO: top alterado para positivo) */
+        .floating-value { 
+            position: absolute; 
+            top: 22px; /* Puxa os números (1990, R$ 0, etc) um pouco mais para cima */
+            transform: translateX(-50%); 
+            font-size: 11px; 
+            font-weight: bold; 
+            color: #3498db; 
+            pointer-events: none; 
+            z-index: 1; 
+            white-space: nowrap; 
+        }
+        
+        /* Estilos dos Radio Buttons (Bolinhas) */
+        .radio-group { display: flex; gap: 15px; align-items: center; margin-top: 5px; }
+        .radio-group label { font-weight: normal; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+        .radio-group input[type="radio"] { 
+            accent-color: #3498db; 
+            transform: scale(1.2); /* Deixa a bolinha um pouquinho maior e mais bonita */
+        }
+        
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .btn-limpar { padding: 10px 15px; background-color: #f79139; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-cancelar { padding: 10px 15px; background-color: #95a5a6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-salvar { padding: 10px 15px; background-color: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 onclick="resetarFiltros()">🚗 Sistema Automotivo</h1>
+
+        <div class="top-controls">
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="Pesquisar" onkeyup="if(event.key === 'Enter') filtrarVeiculosRapido()">
+                <button class="btn-buscar" onclick="filtrarVeiculosRapido()">Buscar</button>
+                <button class="btn-filtro" onclick="abrirModalFiltro()">⚙️ Filtros</button>
+            </div>
+            <button class="btn-novo" onclick="abrirModalCadastro()">+ Novo Veículo</button>
+        </div>
+
+        <div class="vehicle-grid" id="listaVeiculos">
+            <p>Carregando veículos...</p>
+        </div>
+    </div>
+
+    <div class="modal" id="modalFiltro">
+        <div class="modal-content">
+            <h2>⚙️ Filtrar Veículos</h2>
+            
+            <div class="form-group">
+                <label>Marca:</label>
+                <input type="text" id="filtroMarca" list="sugestoesMarcas" placeholder="Todas">
+            </div>
+            <div class="form-group">
+                <label>Modelo:</label>
+                <input type="text" id="filtroModelo" list="sugestoesModelos" placeholder="Todos">
+            </div>
+            <div class="form-group">
+                <label>Cor:</label>
+                <input type="text" id="filtroCor" list="sugestoesCores" placeholder="Todas">
+            </div>
+
+            <div class="form-group dual-slider-group">
+                <label>Ano de Fabricação:</label>
+                <div class="dual-slider-container">
+                    <div class="dual-slider-track grey-track"></div> <div class="dual-slider-track blue-track"></div> <input type="range" class="min-input" id="filtroAnoMin" min="1990" max="2025" value="1990" oninput="refrescarVisualSlider(this.parentElement)">
+                    <span class="floating-value min-val-display"></span>
+                    
+                    <input type="range" class="max-input" id="filtroAnoMax" min="1990" max="2025" value="2025" oninput="refrescarVisualSlider(this.parentElement)">
+                    <span class="floating-value max-val-display"></span>
+                </div>
+                </div>
+
+            <div class="form-group dual-slider-group">
+                <label>Preço (R$):</label>
+                <div class="dual-slider-container">
+                    <div class="dual-slider-track grey-track"></div>
+                    <div class="dual-slider-track blue-track"></div>
+                    
+                    <input type="range" class="min-input" id="filtroPrecoMin" min="0" max="500000" step="5000" value="0" oninput="refrescarVisualSlider(this.parentElement)">
+                    <span class="floating-value min-val-display"></span>
+                    
+                    <input type="range" class="max-input" id="filtroPrecoMax" min="0" max="500000" step="5000" value="500000" oninput="refrescarVisualSlider(this.parentElement)">
+                    <span class="floating-value max-val-display"></span>
+                </div>
+            </div>
+
+            <div class="form-group dual-slider-group">
+                <label>Quilometragem:</label>
+                <div class="dual-slider-container">
+                    <div class="dual-slider-track grey-track"></div>
+                    <div class="dual-slider-track blue-track"></div>
+                    
+                    <input type="range" class="min-input" id="filtroKmMin" min="0" max="300000" step="5000" value="0" oninput="refrescarVisualSlider(this.parentElement)">
+                    <span class="floating-value min-val-display"></span>
+                    
+                    <input type="range" class="max-input" id="filtroKmMax" min="0" max="300000" step="5000" value="300000" oninput="refrescarVisualSlider(this.parentElement)">
+                    <span class="floating-value max-val-display"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Status:</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="filtroStatus" value="TODOS" checked> Todos</label>
+                    <label><input type="radio" name="filtroStatus" value="DISPONIVEL"> Disponível</label>
+                    <label><input type="radio" name="filtroStatus" value="VENDIDO"> Vendido</label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn-limpar" onclick="limparFiltrosModal()">Limpar</button>
+                <button type="button" class="btn-cancelar" onclick="fecharModais()">Cancelar</button>
+                <button type="button" class="btn-salvar" onclick="aplicarFiltrosAvancados()">Aplicar Filtros</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="modalCadastro">
+        <div class="modal-content">
+            <h2 id="tituloModalCadastro">Cadastrar Veículo</h2>
+            <form id="formCadastro" onsubmit="salvarVeiculo(event)">
+                <input type="hidden" id="cadId"> <div class="form-group">
+                    <label>Marca:</label>
+                    <input type="text" id="cadMarca" list="sugestoesMarcas" placeholder="Ex: Toyota, Ford..." required autocomplete="off">
+                    <datalist id="sugestoesMarcas"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Modelo:</label>
+                    <input type="text" id="cadModelo" list="sugestoesModelos" placeholder="Ex: Corolla, Mustang..." required autocomplete="off">
+                    <datalist id="sugestoesModelos"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Ano de Fabricação:</label>
+                    <input type="number" id="cadAno" required>
+                </div>
+                <div class="form-group">
+                    <label>Cor:</label>
+                    <input type="text" id="cadCor" list="sugestoesCores" required autocomplete="off">
+                    <datalist id="sugestoesCores"></datalist>
+                </div>
+                <div class="form-group">
+                    <label>Preço Sugerido (R$):</label>
+                    <input type="number" step="0.01" id="cadPreco" required>
+                </div>
+                <div class="form-group">
+                    <label>Quilometragem:</label>
+                    <input type="number" id="cadKm" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancelar" onclick="fecharModais()">Cancelar</button>
+                    <button type="submit" class="btn-salvar">Salvar Veículo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="modalVenda">
+        <div class="modal-content">
+            <h2>Registrar Venda</h2>
+            <p id="vendaModeloNome" style="font-weight: bold; color: #3498db;"></p>
+            <form id="formVenda" onsubmit="confirmarVenda(event)">
+                <input type="hidden" id="vendaId">
+                <input type="hidden" id="vendaPrecoOriginal">
+                <input type="hidden" id="vendaKmOriginal">
+                
+                <div class="form-group">
+                    <label>Preço Listado (Referência):</label>
+                    <input type="text" id="vendaPrecoRef" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Por quanto o carro foi VENDIDO? (R$):</label>
+                    <input type="number" step="0.01" id="vendaPrecoFinal" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancelar" onclick="fecharModais()">Cancelar</button>
+                    <button type="submit" class="btn-salvar">Confirmar Venda</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let todosVeiculos = [];
+
+        async function carregarDados() {
+            try {
+                const resposta = await fetch('/api/veiculos');
+                todosVeiculos = await resposta.json();
+                renderizarTela(todosVeiculos);
+                atualizarDatalists();
+                atualizarLimitesSliders();
+            } catch (erro) {
+                document.getElementById('listaVeiculos').innerHTML = '<p>Erro ao carregar o sistema.</p>';
+            }
+        }
+
+        function atualizarDatalists() {
+            const marcas = [...new Set(todosVeiculos.map(v => v.modelo && v.modelo.marca ? v.modelo.marca.nome : ''))].filter(Boolean);
+            const modelos = [...new Set(todosVeiculos.map(v => v.modelo ? v.modelo.nome : ''))].filter(Boolean);
+            const cores = [...new Set(todosVeiculos.map(v => v.cor))].filter(Boolean);
+
+            document.getElementById('sugestoesMarcas').innerHTML = marcas.map(m => `<option value="${m}">`).join('');
+            document.getElementById('sugestoesModelos').innerHTML = modelos.map(m => `<option value="${m}">`).join('');
+            document.getElementById('sugestoesCores').innerHTML = cores.map(c => `<option value="${c}">`).join('');
+        }
+
+        function renderizarTela(veiculos) {
+            const grade = document.getElementById('listaVeiculos');
+            grade.innerHTML = ''; 
+            
+            // Requisito 2: Ordena do mais recente (maior ID) para o mais antigo (menor ID)
+            const veiculosOrdenados = [...veiculos].sort((a, b) => b.id - a.id);
+
+            if(veiculosOrdenados.length === 0) {
+                grade.innerHTML = '<p>Nenhum veículo encontrado.</p>';
+                return;
+            }
+            
+            veiculosOrdenados.forEach(v => {
+                const nomeModelo = v.modelo ? v.modelo.nome : 'Desconhecido';
+                const nomeMarca = (v.modelo && v.modelo.marca) ? v.modelo.marca.nome : 'Desconhecida'; // Puxa o nome da marca em segurança
+                
+                const isVendido = v.statusDisponibilidade === 'VENDIDO';
+                const formatarMoeda = (valor) => valor ? valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00';
+                
+                let htmlPreco = isVendido && v.precoVenda 
+                    ? `<p><strong>Preço Final:</strong> <span class="preco-venda">${formatarMoeda(v.precoVenda)}</span> <span class="preco-riscado">(${formatarMoeda(v.preco)})</span></p>`
+                    : `<p><strong>Preço:</strong> ${formatarMoeda(v.preco)}</p>`;
+
+                // Aqui nós adicionamos o <p> da Marca logo abaixo do título <h3>
+                grade.innerHTML += `
+                    <div class="card">
+                        <div class="card-actions">
+                            <button class="icon-btn" onclick="abrirModalEdicao(${v.id})" title="Editar">✏️</button>
+                            <button class="icon-btn" onclick="deletarVeiculo(${v.id})" title="Excluir">❌</button>
+                        </div>
+                        <h3>${nomeModelo}</h3>
+                        <p><strong>Marca:</strong> ${nomeMarca}</p>
+                        <p><strong>Ano:</strong> ${v.anoFabricacao}</p>
+                        <p><strong>Cor:</strong> ${v.cor}</p>
+                        <p><strong>Km:</strong> ${v.quilometragem.toLocaleString('pt-BR')} km</p>
+                        ${htmlPreco}
+                        <span class="status-badge ${isVendido ? 'status-vendido' : 'status-disponivel'}">${v.statusDisponibilidade}</span>
+                        ${!isVendido ? `<button class="btn-vender" onclick="abrirModalVenda(${v.id}, '${nomeModelo}', ${v.preco}, ${v.quilometragem})">💰 Registrar Venda</button>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        // --- SISTEMA DE FILTROS ---
+        function resetarFiltros() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filtroMarca').value = '';
+            document.getElementById('filtroModelo').value = '';
+            document.getElementById('filtroCor').value = '';
+            renderizarTela(todosVeiculos);
+        }
+
+        function filtrarVeiculosRapido() {
+            // Pega o texto, deixa minúsculo, remove espaços extras e TIRA OS ACENTOS
+            const textoBusca = document.getElementById('searchInput').value
+                .toLowerCase()
+                .trim()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            
+            const carrosFiltrados = todosVeiculos.filter(v => {
+                // Puxa os dados com segurança máxima (se não existir, vira espaço em branco)
+                const marca = (v.modelo && v.modelo.marca && v.modelo.marca.nome) ? v.modelo.marca.nome : '';
+                const modelo = (v.modelo && v.modelo.nome) ? v.modelo.nome : '';
+                const cor = v.cor || '';
+                const ano = v.anoFabricacao || '';
+                const preco = v.preco || '';
+                const km = v.quilometragem || '';
+                const status = v.statusDisponibilidade || '';
+
+                // Junta todos os dados em uma frase, deixa minúsculo e TIRA OS ACENTOS
+                const textoCarro = `${marca} ${modelo} ${cor} ${ano} ${preco} ${km} ${status}`
+                    .toLowerCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                
+                // Agora compara os dois textos limpinhos!
+                return textoCarro.includes(textoBusca);
+            });
+            
+            renderizarTela(carrosFiltrados);
+        }
+
+        // NOVA LÓGICA UNIVERSAL PARA SLIDERS MODERNOS
+        function refrescarVisualSlider(container) {
+            const minEl = container.querySelector('.min-input');
+            const maxEl = container.querySelector('.max-input');
+            const blueTrack = container.querySelector('.blue-track');
+
+            const minInput = parseFloat(minEl.min);
+            const maxInput = parseFloat(maxEl.max);
+            let valMin = parseFloat(minEl.value);
+            let valMax = parseFloat(maxEl.value);
+            
+            const range = maxInput - minInput;
+            
+            // Evita erro matemático caso o banco tenha apenas carros idênticos
+            if (range === 0) return;
+
+            // 1. A MÁGICA AQUI: Define uma distância mínima (15% da barra) para os textos não baterem
+            const minGap = range * 0.15;
+
+            // 2. Trava o movimento se as bolinhas chegarem muito perto
+            if (valMax - valMin < minGap) {
+                if (document.activeElement === minEl) {
+                    valMin = Math.round(valMax - minGap); // Arredonda para não quebrar o ano
+                    minEl.value = valMin; 
+                } else {
+                    valMax = Math.round(valMin + minGap); // Arredonda para não quebrar o ano
+                    maxEl.value = valMax; 
+                }
+            }
+
+            function formatarDeAcordoComContexto(valor, containerGroup) {
+                const label = containerGroup.querySelector('label').innerText.toLowerCase();
+                if (label.includes('ano')) return valor;
+                if (label.includes('preço')) return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+                if (label.includes('quilometragem')) return valor.toLocaleString('pt-BR') + ' km';
+                return valor;
+            }
+            const groupEl = container.parentElement;
+
+            // 3. Calcula a posição exata após a trava de colisão
+            const pRealInput1 = ((valMin - minInput) / range) * 100;
+            const pRealInput2 = ((valMax - minInput) / range) * 100;
+
+            const displayMinNativo = container.querySelector('.min-val-display');
+            const displayMaxNativo = container.querySelector('.max-val-display');
+            
+            displayMinNativo.style.left = pRealInput1 + '%';
+            displayMinNativo.innerText = formatarDeAcordoComContexto(valMin, groupEl);
+
+            displayMaxNativo.style.left = pRealInput2 + '%';
+            displayMaxNativo.innerText = formatarDeAcordoComContexto(valMax, groupEl);
+
+            // 4. Desenha a linha azul usando as novas posições travadas
+            blueTrack.style.left = pRealInput1 + '%';
+            blueTrack.style.width = (pRealInput2 - pRealInput1) + '%';
+        }
+
+        // NOVA FUNÇÃO: Aplica os filtros considerando os intervalos duplos modernos
+        function aplicarFiltrosAvancados() {
+            fecharModais(); // Fecha o modal primeiro para carregar a tela limpa
+
+            const marca = document.getElementById('filtroMarca').value.toLowerCase();
+            const modelo = document.getElementById('filtroModelo').value.toLowerCase();
+            const cor = document.getElementById('filtroCor').value.toLowerCase();
+            
+            // Função helper para pegar os valores cruzados corretos
+            function getIntervalo(idMin, idMax) {
+                let vMin = parseFloat(document.getElementById(idMin).value);
+                let vMax = parseFloat(document.getElementById(idMax).value);
+                if(vMin > vMax) { [vMin, vMax] = [vMax, vMin]; } // Troca destrutiva rápida
+                return [vMin, vMax];
+            }
+
+            const [anoMin, anoMax] = getIntervalo('filtroAnoMin', 'filtroAnoMax');
+            const [precoMin, precoMax] = getIntervalo('filtroPrecoMin', 'filtroPrecoMax');
+            const [kmMin, kmMax] = getIntervalo('filtroKmMin', 'filtroKmMax');
+            
+            const statusSelecionado = document.querySelector('input[name="filtroStatus"]:checked').value;
+
+            const filtrados = todosVeiculos.filter(v => {
+                const checkMarca = marca === '' || (v.modelo && v.modelo.marca && v.modelo.marca.nome.toLowerCase().includes(marca));
+                const checkModelo = modelo === '' || (v.modelo && v.modelo.nome.toLowerCase().includes(modelo));
+                const checkCor = cor === '' || (v.cor && v.cor.toLowerCase().includes(cor));
+                
+                const checkAno = v.anoFabricacao >= anoMin && v.anoFabricacao <= anoMax;
+                const checkPreco = v.preco >= precoMin && v.preco <= precoMax;
+                const checkKm = v.quilometragem >= kmMin && v.quilometragem <= kmMax;
+                
+                const checkStatus = statusSelecionado === 'TODOS' || v.statusDisponibilidade === statusSelecionado;
+
+                return checkMarca && checkModelo && checkCor && checkAno && checkPreco && checkKm && checkStatus;
+            });
+
+            renderizarTela(filtrados);
+        }
+
+        function limparFiltrosModal() {
+            // 1. Limpa os campos de texto
+            document.getElementById('filtroMarca').value = '';
+            document.getElementById('filtroModelo').value = '';
+            document.getElementById('filtroCor').value = '';
+
+            // 2. Reseta o Status para a bolinha "Todos"
+            document.querySelector('input[name="filtroStatus"][value="TODOS"]').checked = true;
+
+            // 3. Volta as bolinhas de Mínimo para o valor original mais baixo possível
+            document.getElementById('filtroAnoMin').value = document.getElementById('filtroAnoMin').min;
+            document.getElementById('filtroPrecoMin').value = document.getElementById('filtroPrecoMin').min;
+            document.getElementById('filtroKmMin').value = document.getElementById('filtroKmMin').min;
+
+            // 4. Chama a inteligência que já criamos para puxar as bolinhas de Máximo e consertar a linha azul
+            atualizarLimitesSliders();
+        }
+
+        // --- CONTROLE DE MODAIS ---
+        function fecharModais() {
+            document.getElementById('modalCadastro').style.display = 'none';
+            document.getElementById('modalVenda').style.display = 'none';
+            document.getElementById('modalFiltro').style.display = 'none';
+        }
+
+        function abrirModalFiltro() { document.getElementById('modalFiltro').style.display = 'flex'; }
+        
+        function abrirModalCadastro() {
+            document.getElementById('formCadastro').reset();
+            document.getElementById('cadId').value = ''; // Limpa o ID para ser um POST
+            document.getElementById('tituloModalCadastro').innerText = 'Cadastrar Novo Veículo';
+            document.getElementById('modalCadastro').style.display = 'flex';
+        }
+
+        // NOVA FUNÇÃO: Abre o modal preenchido para edição
+        function abrirModalEdicao(id) {
+            const carro = todosVeiculos.find(v => v.id === id);
+            if(carro) {
+                document.getElementById('cadId').value = carro.id;
+                document.getElementById('cadMarca').value = carro.modelo.marca.nome;
+                document.getElementById('cadModelo').value = carro.modelo.nome;
+                document.getElementById('cadAno').value = carro.anoFabricacao;
+                document.getElementById('cadCor').value = carro.cor;
+                document.getElementById('cadPreco').value = carro.preco;
+                document.getElementById('cadKm').value = carro.quilometragem;
+                
+                document.getElementById('tituloModalCadastro').innerText = '✏️ Editar Veículo';
+                document.getElementById('modalCadastro').style.display = 'flex';
+            }
+        }
+
+        function abrirModalVenda(id, modeloNome, precoOriginal, kmOriginal) {
+            document.getElementById('vendaId').value = id;
+            document.getElementById('vendaPrecoOriginal').value = precoOriginal;
+            document.getElementById('vendaKmOriginal').value = kmOriginal;
+            document.getElementById('vendaModeloNome').innerText = modeloNome;
+            document.getElementById('vendaPrecoRef').value = precoOriginal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('vendaPrecoFinal').value = precoOriginal;
+            document.getElementById('modalVenda').style.display = 'flex';
+        }
+
+        // --- OPERAÇÕES CRUD NO BANCO ---
+        async function salvarVeiculo(event) {
+            event.preventDefault();
+            const id = document.getElementById('cadId').value;
+            
+            const veiculoData = {
+                modelo: { nome: document.getElementById('cadModelo').value, marca: { nome: document.getElementById('cadMarca').value } },
+                anoFabricacao: parseInt(document.getElementById('cadAno').value),
+                cor: document.getElementById('cadCor').value,
+                preco: parseFloat(document.getElementById('cadPreco').value),
+                quilometragem: parseInt(document.getElementById('cadKm').value),
+                statusDisponibilidade: "DISPONIVEL"
+            };
+
+            // Se tem ID, é Edição (PUT). Se não tem, é Cadastro Novo (POST)
+            const metodo = id ? 'PUT' : 'POST';
+            const url = id ? `/api/veiculos/${id}` : '/api/veiculos';
+
+            await fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(veiculoData)
+            });
+
+            fecharModais();
+            carregarDados();
+        }
+
+        async function confirmarVenda(event) {
+            event.preventDefault();
+            const id = document.getElementById('vendaId').value;
+            const dadosAtualizados = {
+                preco: parseFloat(document.getElementById('vendaPrecoOriginal').value),
+                quilometragem: parseInt(document.getElementById('vendaKmOriginal').value),
+                statusDisponibilidade: "VENDIDO",
+                precoVenda: parseFloat(document.getElementById('vendaPrecoFinal').value)
+            };
+            await fetch(`/api/veiculos/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosAtualizados) });
+            fecharModais();
+            carregarDados();
+        }
+
+        // NOVA FUNÇÃO: Excluir Veículo
+        async function deletarVeiculo(id) {
+            if(confirm("Tem certeza que deseja excluir este veículo permanentemente?")) {
+                await fetch(`/api/veiculos/${id}`, { method: 'DELETE' });
+                carregarDados();
+            }
+        }
+
+        carregarDados();
+
+        function atualizarLimitesSliders() {
+            // Se não tiver nenhum veículo cadastrado, ele não faz nada
+            if (todosVeiculos.length === 0) return;
+
+            // 1. Encontra os maiores números dentro do seu banco de dados
+            const maxAno = Math.max(...todosVeiculos.map(v => v.anoFabricacao || 0));
+            const maxPreco = Math.max(...todosVeiculos.map(v => v.preco || 0));
+            const maxKm = Math.max(...todosVeiculos.map(v => v.quilometragem || 0));
+
+            // 2. Atualiza o limite máximo das barras de ANO
+            document.getElementById('filtroAnoMin').max = maxAno;
+            document.getElementById('filtroAnoMax').max = maxAno;
+            document.getElementById('filtroAnoMax').value = maxAno; // Puxa a bolinha pro final
+
+            // 3. Atualiza o limite máximo das barras de PREÇO
+            document.getElementById('filtroPrecoMin').max = maxPreco;
+            document.getElementById('filtroPrecoMax').max = maxPreco;
+            document.getElementById('filtroPrecoMax').value = maxPreco; // Puxa a bolinha pro final
+
+            // 4. Atualiza o limite máximo das barras de QUILOMETRAGEM
+            document.getElementById('filtroKmMin').max = maxKm;
+            document.getElementById('filtroKmMax').max = maxKm;
+            document.getElementById('filtroKmMax').value = maxKm; // Puxa a bolinha pro final
+
+            // 5. Atualiza o visual (linha azul e números) de todas as barras ao mesmo tempo
+            document.querySelectorAll('.dual-slider-container').forEach(container => {
+                refrescarVisualSlider(container);
+            });
+        }
+
+    </script>
+</body>
+</html>

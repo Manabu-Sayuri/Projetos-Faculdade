@@ -1,0 +1,8 @@
+com\sistema\estoque\EstoqueApplication.class
+com\sistema\estoque\model\Marca.class
+com\sistema\estoque\repository\MarcaRepository.class
+com\sistema\estoque\repository\VeiculoRepository.class
+com\sistema\estoque\model\Modelo.class
+com\sistema\estoque\controller\VeiculoController.class
+com\sistema\estoque\repository\ModeloRepository.class
+com\sistema\estoque\model\Veiculo.class
