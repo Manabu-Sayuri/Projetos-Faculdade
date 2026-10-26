@@ -1,0 +1,27 @@
+# VERIFICAÇÃO FORMAL DO SUPERVISOR DE SEGURANÇA (Model Checking)
+Ferramenta simulada: UPPAAL Model Checker
+
+## 1. Requisito de Segurança com Prazo (REQ-SAFE-AA-001)
+Propriedade: "Detetada a mão do operador, o torque deve ser zerado em no máximo 100 ms."
+Expressão CTL: A[] (Scanner.Detectado imply A<>_{<=100ms} Motor.TorqueZero)
+
+## 2. Requisito de Vivacidade (REQ-SAFE-AA-003)
+Propriedade: "Removida a mão e confirmado o rearme, o braço deve retomar a trajetória."
+Expressão CTL: A[] ((Scanner.Livre and Botoeira.Rearme) imply A<> Trajetoria.Retomada)
+
+## 3. Documentação de Contraexemplo Obtido
+Fase: Verificação Preliminar (Iteração 1)
+Propriedade violada: REQ-SAFE-AA-001 (Prazo de 100 ms).
+Cenário do Contraexemplo: 
+- Estado inicial: Robô em movimento (Velocidade = 450 rad/s).
+- T=0ms: Operador entra na zona. Scanner inicia deteção.
+- T=85ms: Scanner confirma deteção (configuração errada de debounce no modelo antigo gerava atraso de 85ms).
+- T=87ms: RTOS sofre jitter de 2ms (ciclo perdido).
+- T=89ms: Tarefa de segurança escalonada, mas preempção por tarefa de rede atrasa execução em 15ms.
+- T=104ms: Comando de Torque Zero enviado ao driver.
+> RESULTADO: Violação (104ms > 100ms).
+
+Ação Corretiva Aplicada ao Modelo:
+1. O atraso do sensor foi limitado a 20 ms via hardware.
+2. A tarefa do supervisor de segurança recebeu prioridade máxima (sem preempção de rede).
+3. Nova verificação confirmou WCRT (Worst-Case Response Time) de 24 ms. Propriedade satisfeita.
